@@ -1,5 +1,4 @@
 import React, { useRef, useState } from "react";
-import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import IconButton from '@mui/material/IconButton';
@@ -12,24 +11,33 @@ import Success from "./Success";
 import moment from "moment";
 
 
-const Todo = ({ todoNo, todo, setRemove }) => {
+const Todo = ({todo, setRemove }) => {
   var [check, setCheck] = useState(false);
   var [active, setActive] = useState(false);
   var [pause, setPause] = useState(false);
   var [time, setTime] = useState(0);
   var [view, setView] = useState(true);
   var [stopped, setStopped] = useState(false);
-  var [stopTime, setStopTime] = useState(0);
   var [openalert, setOpenalert] = useState(false);
+  var [completed,setCompleted] = useState([]);
   const interval = useRef(null);
+
 
   //checkbox checking
   const change = () => {
     check = !check;
     setCheck(check);
+    setStopped(stopped=false);
     if (check === true) {
-      setOpenalert(true);
+      setOpenalert(openalert=true); 
+      todo.status="completed";
+      console.log(todo);
+      setCompleted([...completed],todo);
+      console.log("completed",completed);
     }
+    else{
+      setOpenalert(openalert=false);
+    } 
   }
 
   //pause button action
@@ -37,6 +45,7 @@ const Todo = ({ todoNo, todo, setRemove }) => {
     setPause(pause = true);
     setActive(active = false);
     timer("pause");
+    todo.status="pending";
   }
 
   //stop button action
@@ -49,13 +58,19 @@ const Todo = ({ todoNo, todo, setRemove }) => {
     secondsToHms();
     setCheck(check = true);
     if (check === true) {
-      setOpenalert(true);
+      setOpenalert(openalert=true);
+      todo.status="completed";
+       setCompleted([...completed],todo);
+       console.log("completed",completed);
+    }
+    else{
+      setOpenalert(openalert=false);
     }
   }
 
   //time convert function
   function secondsToHms() {
-     setStopTime (moment.utc(time*1000).format('HH:mm:ss'));
+    todo.timeTaken=moment.utc(time*1000).format('HH:mm:ss');
   }
 
   //play button action
@@ -64,6 +79,7 @@ const Todo = ({ todoNo, todo, setRemove }) => {
     setPause(pause = false);
     setActive(active = true);
     timer("play");
+    todo.status="pending";
   }
 
   //Timer start function
@@ -87,12 +103,11 @@ const Todo = ({ todoNo, todo, setRemove }) => {
   //delete icon action
   const removetodo = () => {
     setRemove(todo);
+    setCheck(check = false);
   }
 
   return (
     <div>
-
-      <List sx={{ width: '100%', maxWidth: 600, bgcolor: 'background.paper' }} style={{ marginLeft: "auto", marginRight: "auto" }}>
         <ListItem>
           <ListItemIcon>
             <Checkbox
@@ -104,8 +119,8 @@ const Todo = ({ todoNo, todo, setRemove }) => {
             />
 
           </ListItemIcon>
-          <ListItemText primary={todo} style={{ textDecoration: check ? "line-through" : "none", color: check ? "red" : "black" }} />
-          <ListItemText secondary={stopTime} style={{ color: "blue", visibility: stopped ? "visible" : "hidden" }} />
+          <ListItemText primary={todo.title} style={{ textDecoration: check ? "line-through" : "none", color: check ? "red" : "black" }} />
+          <ListItemText secondary={todo.timeTaken} style={{ color: "blue", visibility: stopped ? "visible" : "hidden" }} />
 
           <ListItemIcon >
             <IconButton edge="end" aria-label="stop" style={{ color: "red", visibility: check || view ? "hidden" : "visible" }} onClick={stop}>
@@ -129,20 +144,17 @@ const Todo = ({ todoNo, todo, setRemove }) => {
           }
           </ListItemIcon>
 
+          <ListItemIcon style={{ visibility: stopped || check ? "hidden" : "visible" }}>
+          {moment.utc(time*1000).format('HH:mm:ss')}
+          </ListItemIcon>
+
           <ListItemIcon onClick={removetodo}>
             <IconButton edge="end" aria-label="delete" style={{ color: "black" }}>
               <Delete />
             </IconButton>
           </ListItemIcon>
 
-
-          <ListItemIcon style={{ visibility: stopped || check ? "hidden" : "visible" }}>
-          {moment.utc(time*1000).format('HH:mm:ss')}
-          </ListItemIcon>
-
         </ListItem>
-
-      </List>
       {
         openalert ? <Success message="Congrats!!!Task Completed." status="success" /> : ""
       }
