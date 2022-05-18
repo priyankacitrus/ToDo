@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FormControl,
   Container,
@@ -10,43 +10,63 @@ import IconButton from "@mui/material/IconButton";
 import Success from "./Success";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import Todo from "./Todo";
+import db from "../util/firebase";
+
 
 const AddTodo = () => {
 
-   const [todos, setTodos] = useState([]);
+  //db reference
+  const todoRef = db.ref("Todo");
   var newArr = [{}];
-  var newObj = { title: null, status: null, timeTaken: null, createdAt: null };
+  var newObj = { title: null, status: null, timeTaken: null, createdAt: null, done: null };
   const [text, setText] = useState("");
   var [openalert, setOpenalert] = useState(false);
+  var [completed,setCompleted]=useState("");
+  var [dbtodo,setDbtodo]= useState([]);
 
+  useEffect(() => {
+    todoRef.on("value",(snapshot) => {
+      const td = snapshot.val();
+      dbtodo=[];
+      for(let id in td){
+        dbtodo.push({id,...td[id]})
+      }
+      setDbtodo(dbtodo);
+       console.log(dbtodo);
+    });
+  },[]
 
-//Date
-var today = new Date();
-var dd = String(today.getDate()).padStart(2, "0");
-var mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
-var yyyy = today.getFullYear();
+  );
 
-today = mm + "/" + dd + "/" + yyyy;
+  //Date
+  var today = new Date();
+  var dd = String(today.getDate()).padStart(2, "0");
+  var mm = String(today.getMonth() + 1).padStart(2, "0"); 
+  var yyyy = today.getFullYear();
 
-let date = new Date(today);
-let day = date.toLocaleString("en-us", { weekday: "long" });
+  today = mm + "/" + dd + "/" + yyyy;
 
+  let date = new Date(today);
+  let day = date.toLocaleString("en-us", { weekday: "long" });
 
   //create a new todo
-  const handleChange = (e) => {setText(e.target.value);}
+  const handleChange = (e) => {
+    setText(e.target.value);
+  };
 
   const createTodo = (e) => {
+
     e.preventDefault();
     //new object creation
     newObj.title = text;
     newObj.status = "new";
     newObj.timeTaken = "00:00:00";
     newObj.createdAt = today;
-    
+    newObj.done = false;
+
     if (text !== "") {
       setText("");
-      setTodos([...todos, newObj]);
-      console.log(todos);
+      todoRef.push(newObj);
       setOpenalert(false);
     } else {
       setOpenalert(true);
@@ -55,12 +75,15 @@ let day = date.toLocaleString("en-us", { weekday: "long" });
 
   //delete a todo
   const setRemove = (item) => {
-    newArr = [...todos].filter((todo) => todo !== item);
-    console.log("newarr",newArr);
-    setTodos(newArr);
+    newArr = [...dbtodo].filter((todo) => todo !== item);
+    setDbtodo(newArr);
   };
 
-  
+   //complete a todo
+   const setComplete = (c) => {
+    setCompleted(completed,c);
+  };
+
   return (
     <div>
       <Container
@@ -68,10 +91,10 @@ let day = date.toLocaleString("en-us", { weekday: "long" });
         style={{ marginTop: "50px", backgroundColor: "white", padding: "10px" }}
       >
         <form>
-          <Typography variant="h4" component="h2">
+          <Typography variant="h4" component="h2" style={{ padding: "10px", color: "blue", fontFamily: "sans-serif" }}>
             {day}
           </Typography>
-          <Typography variant="h5" component="h2">
+          <Typography variant="h5" component="h2" style={{ padding: "10px", color: "blue", fontFamily: "sans-serif" }}>
             {today}
           </Typography>
           <FormControl
@@ -86,7 +109,7 @@ let day = date.toLocaleString("en-us", { weekday: "long" });
             <TextField
               style={{ width: "90%", padding: "5px" }}
               id="outlined-basic"
-              label="Enter the Activity"
+              label="Enter the Task"
               variant="outlined"
               onChange={handleChange}
               required={true}
@@ -106,35 +129,69 @@ let day = date.toLocaleString("en-us", { weekday: "long" });
           </FormControl>
         </form>
       </Container>
-      {todos.length > 0 ? (
+      {dbtodo.length >0  ? (
+
         <List
           sx={{ width: "100%", maxWidth: 600, bgcolor: "background.paper" }}
           style={{ marginLeft: "auto", marginRight: "auto" }}
         >
-          {todos.map((todo, index) => {
-            return (
-              <Todo
-                todoNo={index}
-                todo={todo}
-                key={index}
-                setRemove={setRemove}
-              />
-            );
-          })}
-        </List>
-      ) : (
+          {
+            dbtodo.filter((todo, index) => !todo.done)
+              .map((todo, index) =>
+              (
+                <Todo
+                  todoNo={index}
+                  todo={todo}
+                  key={index}
+                  setRemove={setRemove}
+                  setComplete={setComplete}
+                />
+              )
+              )}
 
-        <Container
-        maxWidth="sm"
-        style={{ backgroundColor: "white",padding:"10px" }}
-      >
-        <Typography style={{textAlign:"center", marginLeft: "auto", marginRight: "auto"}}>
-        No Tasks Added Yet!!!!!
-      </Typography>
-      </Container>
-      )}
+          {
+            dbtodo.filter((todo, index) => todo.done)
+              .map((todo, index) =>
+              (
+                <Todo
+                  todoNo={index}
+                  todo={todo}
+                  key={index}
+                  setRemove={setRemove}
+                  setComplete={setComplete}
+                />
+
+              )
+              )
+          }
+
+
+        </List>
+      )
+
+        :
+
+        (
+          <Container
+            maxWidth="sm"
+            style={{ backgroundColor: "white", padding: "10px" }}
+          >
+            <Typography
+              style={{
+                textAlign: "center",
+                marginLeft: "auto",
+                marginRight: "auto",
+              }}
+            >
+              No Tasks Added Yet!!!!!
+            </Typography>
+          </Container>
+        )
+
+      }
+
       {openalert ? (
-        <Success message="Please enter an Activity!!!!" status="error" />
+        <Success message="Please enter a Task!!!!" status="error" />
       ) : (
         ""
       )}
